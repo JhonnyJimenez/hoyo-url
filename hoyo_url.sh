@@ -8,7 +8,7 @@
 #════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 #	AUTH: John Smith (FLT)
 #	DATE: 2024-10-26
-#	VERS: 0.4.1
+#	VERS: 0.5.0
 #	DESC: Get Genshin Impact Wish URL for uploading to paimon.moe and ZZZ Signal URL for rng.moe
 #	LINK: https://gamebanana.com/scripts/12245 (Script documentation on GameBanana)
 #	LISC: GPLv3 (https://www.gnu.org/licenses/gpl.html)
@@ -18,6 +18,7 @@
 #		2024-12-31 - Update to Banner Version 5.3 Phase 1
 #		2025-01-10 - Add support for ZZZ and an auto-detect feature for the latest DATA_2 PATH (Ex. Auto-Detect: 2.33.0.0, 2.XX.0.0) | Added GPLv3 License link.
 #		2025-03-04 - Add a link to the script documentation on GB
+#		2025-06-16 - Refactored for better readability, code cleanup for improved maintainability and for any possible future expansion.
 
 #════════════════════════
 #════════ Colors ════════
@@ -34,48 +35,63 @@ COLOR_GRA="\e[1;37m"
 #═══════════════════════════
 #════════ Functions ════════
 #═══════════════════════════
-HELP_ME() {
-	echo "This is a help function."
+help_me() {
+	echo "This script is a little helper for getting your pull history of Genshin for paimon.moe or the Zenless Zone Zero one for rng.moe. Just modify path in Variable sections and run this script like this:
+	
+  For Genshin:
+    ./this_script_name.sh g
+	
+  For Zenless Zone Zero:
+    ./this_script_name.sh z"
+
 	exit 0
 }
 
-SPACER() {
-	COLUMN_COUNT="$(tput cols)"
-	for i in $(seq $COLUMN_COUNT); do
+spacer() {
+	column_count="$(tput cols)"
+	for i in $(seq $column_count); do
 		echo -n "═"
 	done
 	echo
 }
 
-URL_GENSHIN() {
-	SPACER
-	DATA_2_GENSHIN=${PATH_GENSHIN}/$(find "${PATH_GENSHIN}" -maxdepth 1 -type d -printf '%T@ %p\n' | sort -n | tail -1 | cut -f2- -d " " | rev | cut -d "/" -f 1 | rev)/Cache/Cache_Data/data_2
-	echo -e "${COLOR_CYA}Getting ${COLOR_GRA}Genshin ${COLOR_CYA}url from data_2 and copying to clipboard.${COLOR_NO}"
-	echo -e "Last Modified: ${COLOR_MAG}$(stat -c %y "$DATA_2_GENSHIN" | cut -c -16)${COLOR_NO}"
-	SPACER
-	echo -en "${COLOR_YEL}"
-	grep -a "https://gs.hoyoverse.com/genshin/event/e20190909gacha-v3/.*hk4e_global" "$DATA_2_GENSHIN" | strings | grep "https://gs.hoyoverse.com/genshin/event/e20190909gacha-v3/.*hk4e_global" | tail -1 | sed -n "s:1/0/::p"
-	echo -en "${COLOR_NO}"
-	SPACER
-	grep -a "https://gs.hoyoverse.com/genshin/event/e20190909gacha-v3/.*hk4e_global" "$DATA_2_GENSHIN" | strings | grep "https://gs.hoyoverse.com/genshin/event/e20190909gacha-v3/.*hk4e_global" | tail -1 | sed -n "s:1/0/::p" | xsel -b
-	echo -e "${COLOR_GRE}Link copied to clipboard!${COLOR_NO}"
-	SPACER
-	exit 0
+get_lastest_folder() {
+	local game_folder="$1"
+	echo "$game_folder"/$(find "$game_folder" -maxdepth 1 -type d -printf '%T@ %p\n' | sort -n | tail -1 | cut -f2- -d " " | rev | cut -d "/" -f 1 | rev)/Cache/Cache_Data/data_2
 }
 
-URL_ZENLESS() {
-	SPACER
-	DATA_2_ZENLESS=${PATH_ZENLESS}/$(find "${PATH_ZENLESS}" -maxdepth 1 -type d -printf '%T@ %p\n' | sort -n | tail -1 | cut -f2- -d " " | rev | cut -d "/" -f 1 | rev)/Cache/Cache_Data/data_2
-	echo -e "${COLOR_CYA}Getting ${COLOR_GRA}Zenless ${COLOR_CYA}url from data_2 and copying to clipboard.${COLOR_NO}"
-	echo -e "Last Modified: ${COLOR_MAG}$(stat -c %y "$DATA_2_ZENLESS" | cut -c -16)${COLOR_NO}"
-	SPACER
+choose_url() {
+	if [[ $1 == g ]]; then
+		echo $(grep -a "https://gs.hoyoverse.com/genshin/event/e20190909gacha-v3/.*hk4e_global" "$data_2_folder" | strings | grep "https://gs.hoyoverse.com/genshin/event/e20190909gacha-v3/.*hk4e_global" | tail -1 | sed -n "s:1/0/::p")
+	elif [[ $1 == z ]]; then
+		echo $(grep -a "https.*getGachaLog" "$data_2_folder" | strings | grep "https.*getGachaLog" | tail -1 | sed -n "s:1/0/::p")
+	fi
+}
+
+get_history() {
+	if [[ $1 == g ]]; then
+		local folder="$PATH_GENSHIN"
+		local game='Genshin'
+
+	elif [[ $1 == z ]]; then
+		local folder="$PATH_ZENLESS"
+		local game='Zenless'
+	fi
+
+	data_2_folder=$(get_lastest_folder "$folder")
+
+
+	spacer
+	echo -e "${COLOR_CYA}Getting ${COLOR_GRA}${game} ${COLOR_CYA}url from data_2_folder and copying to clipboard.${COLOR_NO}"
+	echo -e "Last Modified: ${COLOR_MAG}$(stat -c %y "$data_2_folder" | cut -c -16)${COLOR_NO}"
+	spacer
 	echo -en "${COLOR_YEL}"
-	grep -a "https.*getGachaLog" "$DATA_2_ZENLESS" | strings | grep "https.*getGachaLog" | tail -1 | sed -n "s:1/0/::p"
+	choose_url g
 	echo -en "${COLOR_NO}"
-	SPACER
-	grep -a "https.*getGachaLog" "$DATA_2_ZENLESS" | strings | grep "https.*getGachaLog" | tail -1 | sed -n "s:1/0/::p" | xsel -b
+	spacer
+	choose_url | xsel -b
 	echo -e "${COLOR_GRE}Link copied to clipboard!${COLOR_NO}"
-	SPACER
+	spacer
 	exit 0
 }
 
@@ -83,21 +99,23 @@ URL_ZENLESS() {
 #════════ Variables ════════
 #═══════════════════════════
 
-# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-# CHANGE THIS TO YOUR ACTUAL FILEPATH
-# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-PATH_GENSHIN=$HOME/Games/Files/Genshin\ Impact\ game/GenshinImpact_Data/webCaches
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! #
+# CHANGE THIS TO YOUR ACTUAL FILEPATH  #
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! #
+PATH_GENSHIN=$HOME/Games/Files/Genshin\ Impact/GenshinImpact_Data/webCaches
 PATH_ZENLESS=$HOME/Games/Files/ZenlessZoneZero\ Game/ZenlessZoneZero_Data/webCaches
 
 #═════════════════════════════
 #════════ Main Script ════════
 #═════════════════════════════
 if [[ -z $1 ]]; then
-	URL_GENSHIN
+	help_me
 elif [[ $1 == g ]]; then
-	URL_GENSHIN
+	get_history g
 elif [[ $1 == z ]]; then
-	URL_ZENLESS
+	get_history z
+elif [[ $1 == 'help' ]]; then
+	help_me
 else
-	HELP_ME
+	help_me
 fi
